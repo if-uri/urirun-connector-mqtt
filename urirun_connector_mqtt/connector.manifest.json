@@ -1,0 +1,20 @@
+{
+  "id": "mqtt",
+  "name": "MQTT",
+  "status": "available",
+  "category": "IoT",
+  "summary": "Publish, subscribe and bridge firmware/backend/frontend device commands through MQTT URI routes.",
+  "description": "MQTT is an external urirun connector. It exposes mqtt:// publish and device:// command-bridge routes. Publishing is a side effect, so routes default to dry-run (returning the publish plan); pass --execute (or mode=execute) to publish, which needs the optional paho-mqtt dependency and a reachable broker.",
+  "useCases": [
+    "Publish a message to an MQTT topic from a URI flow.",
+    "Bridge a device command (e.g. turn an LED on) to an MQTT publish.",
+    "Project MQTT publish to MCP/A2A so agents can drive devices."
+  ],
+  "flowExample": ["device://device-01/led/command/set", "mqtt://broker/topic/command/publish"],
+  "requires": ["python>=3.10"],
+  "install": {"mode": "urirun-extra", "pipSpec": "urirun-connector-mqtt @ git+https://github.com/if-uri/urirun-connector-mqtt.git@v0.1.0"},
+  "provenance": "community",
+  "publisher": {"name": "if-uri", "url": "https://ifuri.com", "github": "https://github.com/if-uri"},
+  "docsUrl": "https://github.com/if-uri/urirun-connector-mqtt",
+  "keywords": ["mqtt", "iot", "device", "publish", "connector"]
+}
