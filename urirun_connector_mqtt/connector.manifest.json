@@ -10,11 +10,40 @@
     "Bridge a device command (e.g. turn an LED on) to an MQTT publish.",
     "Project MQTT publish to MCP/A2A so agents can drive devices."
   ],
-  "flowExample": ["device://device-01/led/command/set", "mqtt://broker/topic/command/publish"],
-  "requires": ["python>=3.10"],
-  "install": {"mode": "urirun-extra", "pipSpec": "urirun-connector-mqtt @ git+https://github.com/if-uri/urirun-connector-mqtt.git@v0.1.0"},
+  "flowExample": [
+    "device://device-01/led/command/set",
+    "mqtt://broker/topic/command/publish"
+  ],
+  "requires": [
+    "python>=3.10"
+  ],
+  "install": {
+    "mode": "urirun-extra",
+    "pipSpec": "urirun-connector-mqtt @ git+https://github.com/if-uri/urirun-connector-mqtt.git@v0.1.0"
+  },
   "provenance": "community",
-  "publisher": {"name": "if-uri", "url": "https://ifuri.com", "github": "https://github.com/if-uri"},
+  "publisher": {
+    "name": "if-uri",
+    "url": "https://ifuri.com",
+    "github": "https://github.com/if-uri"
+  },
   "docsUrl": "https://github.com/if-uri/urirun-connector-mqtt",
-  "keywords": ["mqtt", "iot", "device", "publish", "connector"]
+  "keywords": [
+    "mqtt",
+    "iot",
+    "device",
+    "publish",
+    "connector"
+  ],
+  "routes": [
+    "device://device-01/led/command/set",
+    "mqtt://broker/topic/command/publish"
+  ],
+  "uriSchemes": [
+    "device",
+    "mqtt"
+  ],
+  "adapterKinds": [
+    "local-function"
+  ]
 }
