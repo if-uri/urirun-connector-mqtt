@@ -29,7 +29,6 @@ Both connector objects share the ``mqtt`` connector id, so a single
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
 import urirun
@@ -42,27 +41,9 @@ device = urirun.connector(CONNECTOR_ID, scheme="device", target="device-01")
 
 # --- route logic (real implementation) ------------------------------------
 
-def _resolve_secret(value: str, secret_allow: str = "") -> str:
-    """Resolve a credential that may be a secret *reference*, via the urirun secrets layer.
-
-    ``value`` may be a literal, a ``secret://``/``getv://`` reference, or a ``{getv:NAME}`` /
-    ``{secret:...}`` placeholder, resolved under a deny-by-default allow-list (``secret_allow``
-    globs). A literal passes through; empty returns ''. Keeps the broker password addressed by
-    reference instead of being embedded in the URI/manifest.
-    """
-    value = (value or "").strip()
-    if not value:
-        return ""
-    try:
-        from urirun.runtime import secrets as _secrets
-    except Exception:  # noqa: BLE001 - older urirun without the secrets layer
-        return value if ("://" not in value and "{" not in value) else ""
-    allow = [p for p in re.split(r"[,\s]+", secret_allow or "") if p]
-    if _secrets.has_secret(value):
-        return _secrets.fill_secrets(value, execute=True, allow=allow)
-    if value.startswith(("secret://", "getv://")):
-        return _secrets.resolve(value, execute=True, allow=allow).reveal()
-    return value
+# The broker password is addressed by reference (never embedded); the shared resolver lives in
+# the urirun SDK so every connector honours the secrets layer identically.
+_resolve_secret = urirun.resolve_secret
 
 
 def _publish_real(topic: str, message: str, qos: int, retain: bool, broker: str, port: int,
