@@ -29,6 +29,7 @@ Both connector objects share the ``mqtt`` connector id, so a single
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import urirun
@@ -41,13 +42,39 @@ device = urirun.connector(CONNECTOR_ID, scheme="device", target="device-01")
 
 # --- route logic (real implementation) ------------------------------------
 
-def _publish_real(topic: str, message: str, qos: int, retain: bool, broker: str, port: int) -> dict[str, Any]:
+def _resolve_secret(value: str, secret_allow: str = "") -> str:
+    """Resolve a credential that may be a secret *reference*, via the urirun secrets layer.
+
+    ``value`` may be a literal, a ``secret://``/``getv://`` reference, or a ``{getv:NAME}`` /
+    ``{secret:...}`` placeholder, resolved under a deny-by-default allow-list (``secret_allow``
+    globs). A literal passes through; empty returns ''. Keeps the broker password addressed by
+    reference instead of being embedded in the URI/manifest.
+    """
+    value = (value or "").strip()
+    if not value:
+        return ""
+    try:
+        from urirun.runtime import secrets as _secrets
+    except Exception:  # noqa: BLE001 - older urirun without the secrets layer
+        return value if ("://" not in value and "{" not in value) else ""
+    allow = [p for p in re.split(r"[,\s]+", secret_allow or "") if p]
+    if _secrets.has_secret(value):
+        return _secrets.fill_secrets(value, execute=True, allow=allow)
+    if value.startswith(("secret://", "getv://")):
+        return _secrets.resolve(value, execute=True, allow=allow).reveal()
+    return value
+
+
+def _publish_real(topic: str, message: str, qos: int, retain: bool, broker: str, port: int,
+                  username: str = "", password: str = "") -> dict[str, Any]:
     try:
         import paho.mqtt.publish as mqtt_publish
     except ImportError:
         return urirun.fail("paho-mqtt is not installed; install with the [mqtt] extra")
+    auth = {"username": username, "password": password} if username else None
     try:
-        mqtt_publish.single(topic, payload=message, qos=qos, retain=retain, hostname=broker, port=port)
+        mqtt_publish.single(topic, payload=message, qos=qos, retain=retain,
+                            hostname=broker, port=port, auth=auth)
     except Exception as exc:  # noqa: BLE001 - report broker errors as JSON
         return urirun.fail(str(exc), action="publish", topic=topic)
     return urirun.ok(action="publish", published=True, topic=topic, broker=broker)
@@ -56,18 +83,30 @@ def _publish_real(topic: str, message: str, qos: int, retain: bool, broker: str,
 # --- route declarations: schema + implementation derived from the signature ---
 
 @conn.handler("topic/command/publish", isolated=True, meta={"label": "Publish an MQTT message"})
-def publish(topic: str, message: str = "", qos: int = 0, retain: bool = False, broker: str = "localhost", port: int = 1883) -> dict[str, Any]:
-    """Publish a message to an MQTT topic over the network."""
+def publish(topic: str, message: str = "", qos: int = 0, retain: bool = False, broker: str = "localhost", port: int = 1883,
+            username: str = "", password: str = "", secret_allow: str = "") -> dict[str, Any]:
+    """Publish a message to an MQTT topic over the network.
+
+    For an authenticated broker pass ``username`` and ``password``; the password may be a
+    secret *reference* (``getv://MQTT_PASS`` / ``secret://keyring/mqtt#pass``) resolved through
+    the secrets layer under ``secret_allow`` (deny-by-default). Anonymous brokers need neither.
+    """
     if not topic:
         return urirun.fail("topic is required")
-    return _publish_real(topic, message, qos, retain, broker, port)
+    try:
+        secret = _resolve_secret(password, secret_allow)
+    except PermissionError as exc:
+        return urirun.fail(f"password secret denied by policy (add it to secret_allow): {exc}", action="publish", topic=topic)
+    return _publish_real(topic, message, qos, retain, broker, port, username=username, password=secret)
 
 
 @device.handler("device://device-01/led/command/set", isolated=True, meta={"label": "Set a device command over MQTT"})
-def device_set(device: str = "device-01", component: str = "led", value: str = "on", broker: str = "localhost", port: int = 1883) -> dict[str, Any]:
+def device_set(device: str = "device-01", component: str = "led", value: str = "on", broker: str = "localhost", port: int = 1883,
+               username: str = "", password: str = "", secret_allow: str = "") -> dict[str, Any]:
     """Set a device command, bridged to an MQTT publish on ``device/<device>/<component>/set``."""
     topic = f"device/{device}/{component}/set"
-    result = publish(topic, message=value, broker=broker, port=port)
+    result = publish(topic, message=value, broker=broker, port=port,
+                     username=username, password=password, secret_allow=secret_allow)
     result["device"] = device
     result["component"] = component
     result["value"] = value

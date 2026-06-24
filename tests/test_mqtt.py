@@ -25,7 +25,7 @@ def _fake_publish_real(monkeypatch):
     monkeypatch.setattr(
         core,
         "_publish_real",
-        lambda topic, message, qos, retain, broker, port: urirun.ok(
+        lambda topic, message, qos, retain, broker, port, username="", password="": urirun.ok(
             action="publish", published=True, topic=topic, broker=broker
         ),
     )
@@ -51,6 +51,25 @@ def test_device_set_maps_to_topic(monkeypatch) -> None:
     assert result["value"] == "on"
     assert result["device"] == "device-01"
     assert result["component"] == "led"
+
+
+def test_publish_resolves_password_secret_reference(monkeypatch) -> None:
+    seen = {}
+    monkeypatch.setattr(
+        core, "_publish_real",
+        lambda topic, message, qos, retain, broker, port, username="", password="":
+            seen.update(user=username, pw=password) or urirun.ok(published=True, topic=topic, broker=broker),
+    )
+    monkeypatch.setenv("MQTT_SECRET", "br0kerpass")
+
+    ok = publish("sensors/temp", message="21.5", username="iot",
+                 password="getv://MQTT_SECRET", secret_allow="getv://MQTT_SECRET")
+    assert ok["ok"] is True
+    assert seen == {"user": "iot", "pw": "br0kerpass"}  # reference resolved to the real password
+
+    denied = publish("sensors/temp", message="21.5", username="iot", password="getv://MQTT_SECRET")
+    assert denied["ok"] is False
+    assert "denied by policy" in denied["error"]
 
 
 def test_bindings_are_isolated_handlers() -> None:
