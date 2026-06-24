@@ -26,6 +26,21 @@ urirun-connector-mqtt publish --topic sensors/temp --message 21.5            # d
 urirun-connector-mqtt publish --topic sensors/temp --message 21.5 --dry-run false --broker localhost
 ```
 
+## Authenticated brokers
+
+For a broker that requires auth, pass `username` and `password`; anonymous brokers
+need neither. The **password is addressed by reference** through the urirun secrets
+layer — a literal, a `getv://MQTT_PASS` / `secret://keyring/mqtt#pass` reference
+(resolved deny-by-default under `secret_allow`):
+
+```bash
+urirun-connector-mqtt publish --topic sensors/temp --message 21.5 \
+  --broker mqtt.example.com --username iot \
+  --password 'secret://keyring/mqtt#pass' --secret_allow 'secret://keyring/mqtt#pass'
+```
+
+`device_set` accepts the same `username`/`password`/`secret_allow` and forwards them.
+
 ## Test
 
 ```bash
