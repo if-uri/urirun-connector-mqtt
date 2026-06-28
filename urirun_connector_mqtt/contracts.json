@@ -9,7 +9,7 @@
         "broker": "?str", "port": "?int", "username": "?str", "password": "?str", "secret_allow": "?str"
       },
       "out": { "action": "const:publish", "published": "const:true", "topic": "str", "broker": "str" },
-      "errors": ["invalid-argument", "credentials-missing", "broker-error", "dependency-missing"],
+      "errors": ["precondition-unmet", "unauthenticated", "degraded-backend"],
       "examples": [
         {
           "payload": { "topic": "home/light" },
@@ -29,7 +29,7 @@
         "action": "const:publish", "published": "const:true", "topic": "str", "broker": "str",
         "device": "str", "component": "str", "value": "str"
       },
-      "errors": ["credentials-missing", "broker-error", "dependency-missing"],
+      "errors": ["unauthenticated", "degraded-backend", "precondition-unmet"],
       "examples": [
         {
           "payload": { "value": "off" },
