@@ -1,0 +1,46 @@
+{
+  "contracts": {
+    "topic/command/publish": {
+      "version": "v1",
+      "effect": "command",
+      "reversible": false,
+      "inp": {
+        "topic": "str", "message": "?str", "qos": "?int", "retain": "?bool",
+        "broker": "?str", "port": "?int", "username": "?str", "password": "?str", "secret_allow": "?str"
+      },
+      "out": { "action": "const:publish", "published": "const:true", "topic": "str", "broker": "str" },
+      "errors": ["invalid-argument", "credentials-missing", "broker-error", "dependency-missing"],
+      "examples": [
+        {
+          "payload": { "topic": "home/light" },
+          "result": { "ok": true, "action": "publish", "published": true, "topic": "home/light", "broker": "localhost" }
+        }
+      ]
+    },
+    "led/command/set": {
+      "version": "v1",
+      "effect": "command",
+      "reversible": false,
+      "inp": {
+        "device": "?str", "component": "?str", "value": "?str", "broker": "?str",
+        "port": "?int", "username": "?str", "password": "?str", "secret_allow": "?str"
+      },
+      "out": {
+        "action": "const:publish", "published": "const:true", "topic": "str", "broker": "str",
+        "device": "str", "component": "str", "value": "str"
+      },
+      "errors": ["credentials-missing", "broker-error", "dependency-missing"],
+      "examples": [
+        {
+          "payload": { "value": "off" },
+          "result": {
+            "ok": true, "action": "publish", "published": true,
+            "topic": "device/device-01/led/set", "broker": "localhost",
+            "device": "device-01", "component": "led", "value": "off"
+          }
+        }
+      ]
+    }
+  },
+  "wires": []
+}
